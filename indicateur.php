@@ -37,20 +37,17 @@
     $id_odd = $_GET['id_odd'] ?? $indicateur['code'].str_split('.')[0] ;
     
 
-    $resultatFinal = calculerIndicateur($pdo, $indicateur['formule'], $indicateur['id_indicateur'], $id_user, $annee)
-      ?? ($indicateur['type_valeur'] === 'Boolean' ? getBooleanFromOddTable(
-              $pdo, 
-              $id_odd, 
-              $indicateur['code'], 
-              $id_user, 
-              $annee
-          )
-          : null);
+    // $resultatFinal = calculerIndicateur($pdo, $indicateur['formule'], $indicateur['id_indicateur'], $id_user, $annee)
+    //   ?? ($indicateur['type_valeur'] === 'Boolean' ? getBooleanFromOddTable(
+    //           $pdo, 
+    //           $id_odd, 
+    //           $indicateur['code'], 
+    //           $id_user, 
+    //           $annee
+    //       )
+    //       : null);
     
     $indicateur['score'] = $latestValue;
-  
-    
-
 ?>
 
 <html lang="fr">
@@ -71,59 +68,37 @@
   </style>
 </head>
 <body>
-  <div class="container-fluid p-5">
-    <div class="row g-4 mb-4">
-      <div class="col-md-2 flex-fill">
-        <a href="#" class="card card-glass text-center p-3 d-block h-100">
-          <i class="bi bi-check-circle icon-large text-success"></i>
-          <h5 class="mt-2">ODD Atteints</h5>
-          <h2>12</h2>
-        </a>
-      </div>
-      <div class="col-md-2 flex-fill">
-        <a href="#" class="card card-glass text-center p-3 d-block h-100">
-          <i class="bi bi-hourglass-split icon-large text-primary"></i>
-          <h5 class="mt-2">ODD en cours</h5>
-          <h2>4</h2>
-        </a>
-      </div>
-      <div class="col-md-2 flex-fill">
-        <a href="#" class="card card-glass text-center p-3 d-block h-100">
-          <i class="bi bi-exclamation-circle icon-large text-warning"></i>
-          <h5 class="mt-2">ODD en retard</h5>
-          <h2>1</h2>
-        </a>
-      </div>
-      <div class="col-md-2 flex-fill">
-        <a href="#" class="card card-glass text-center p-3 d-block h-100">
-          <i class="bi bi-bell icon-large text-danger"></i>
-          <h5 class="mt-2">Alertes</h5>
-          <h2>2</h2>
-        </a>
-      </div>
-      <div class="col-md-2 flex-fill">
-        <a href="#" class="card card-glass text-center p-3 d-block">
-          <i class="bi bi-plug icon-large text-info"></i>
-          <h5 class="mt-2">API Connectées</h5>
-          <h2>✓</h2>
-          <small>Dernière synchro : 12:34</small>
-        </a>
-      </div>	  
-      <div class="col-md-2 flex-fill">
-        <a href="#" class="card card-glass text-center p-3 d-block h-100">
-          <i class="bi bi-patch-check icon-large text-info"></i>
-          <h5 class="mt-2">Certification ISO</h5>
-          <h2>✔</h2>
-        </a>
-      </div>
-    </div>
-    <div class="row g-4 mb-4">
-    
 
+  <div class="container-fluid p-5">
+      <?php if ($latestValue === null): ?>
+        <div id="error-message" class="position-fixed top-0 end-0 p-3" style="z-index: 1080; width: 350px;">
+            <div class="alert alert-danger d-flex align-items-center border-start border-danger border-4 rounded shadow-sm mb-0">
+                <svg class="flex-shrink-0 me-2" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <?php echo "Aucune valeur n'est attribuée à l'indicateur dans votre région"; ?>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            setTimeout(() => {
+                const errorMsg = document.getElementById('error-message');
+                if (errorMsg) errorMsg.style.display = 'none';
+            }, 5000);
+        </script>
+    <?php endif; ?>
+    <div class="row g-4 mb-4">
      <div class="row-md-4">
-      
         <div class="card card-glass p-3 h-100" >
-          
+          <div class="d-flex align-items-center">
+            <a href="javascript:location.reload();" class="btn btn-secondary justify-content-center">
+              <!-- <i class="fas fa-sync-alt me-2"></i> -->
+              <i class="bi bi-arrow-clockwise me-2"></i>
+              Actualiser
+            </a>
+          </div>          
           <div class="d-flex justify-content-between">
             <?php if($id_idicateur !== "1"): ?>
               <a href="/indicateur.php?id_indicateur=<?= htmlspecialchars($id_idicateur-1) ?>"
@@ -173,6 +148,8 @@
       </div>
      
     </div>
+
+    
 
     
 
@@ -226,11 +203,10 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="alert('Failed to load Chart.js!')"></script>
 
-<!-- <script src="https://raw.githack.com/eKoopmans/html2pdf/master/dist/html2pdf.bundle.js"></script> -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   
   <script>
@@ -288,12 +264,10 @@
                 const datasetLabel = context.dataset.label || '';
                 const value = context.parsed.y;
                 
-                // For the threshold dataset, just show its value
                 if (datasetLabel === 'Seuils (%)') {
                   return `${datasetLabel}: ${value}%`;
                 }
                 
-                // For the score dataset, show comparison
                 const diff = score - threshold;
                 const prefix = diff >= 0 ? '+' : '';
                 return [
@@ -335,7 +309,6 @@ function generateAnalysisText(score, threshold) {
 
   const name = "Indicateur <?php echo addslashes($indicateur['code']) ?> \n <?php echo addslashes($indicateur['nom_indicateur']); ?>"; 
   
-  // Split long titles into multiple lines (max 40 characters per line)
   const splitTitle = (title) => {
     const words = title.split(' ');
     let lines = [''];
@@ -360,88 +333,32 @@ function generateAnalysisText(score, threshold) {
 
 
 
-// async function generatePdf() {
-//   // 1. Convert chart to image
-//   const canvas = document.getElementById('oddChart');
-//   const chartImage = canvas.toDataURL('image/png');
-  
-//   // Get score and threshold (implement these functions)
-//   const {title, analysis} = generateAnalysisText(score, threshold);
-  
-//   // 3. Create PDF
-//   const pdf = new jspdf.jsPDF({
-//     orientation: 'portrait',
-//     unit: 'mm',
-//     format: 'a4'
-//   });
-
-//   // 4. Add title with styling
-//   pdf.setFont('helvetica', 'bold');
-//   pdf.setTextColor(0, 0, 139); // Dark blue color
-//   pdf.setFontSize(16);
-//   pdf.text(title, 105, 15, {align: 'center'});
-
-//   // 5. Add chart image (centered)
-//   const imgWidth = 180;
-//   const imgHeight = (canvas.height * imgWidth) / canvas.width;
-//   const pageWidth = pdf.internal.pageSize.getWidth();
-//   const xPos = (pageWidth - imgWidth) / 2;
-  
-//   pdf.addImage(chartImage, 'PNG', xPos, 25, imgWidth, imgHeight);
-  
-//   // 6. Add analysis text with styling
-//   pdf.setFont('helvetica');
-//   pdf.setFontSize(12);
-//   pdf.setTextColor(0, 0, 0); // Black color
-  
-//   // Split text and add to PDF
-//   const splitText = pdf.splitTextToSize(analysis, pageWidth - 40);
-//   const textYPosition = 30 + imgHeight;
-  
-//   // Add colored section header
-//   pdf.setFont('helvetica', 'bold');
-//   pdf.setTextColor(70, 130, 180); // Steel blue
-//   pdf.text('ANALYSE DE PERFORMANCE', 20, textYPosition);
-  
-//   // Add the rest of the text
-//   pdf.setFont('helvetica', 'normal');
-//   pdf.setTextColor(0, 0, 0);
-//   pdf.text(splitText, 20, textYPosition + 10);
-  
-//   // 7. Save PDF
-//   pdf.save('performance_report.pdf');
-// }
-
 
 async function generatePdf() {
-  // 1. Convert chart to image
   const canvas = document.getElementById('oddChart');
   const chartImage = canvas.toDataURL('image/png');
   
-  // Get score and threshold
   const {title, analysis} = generateAnalysisText(score, threshold);
   
-  // 3. Create PDF
   const pdf = new jspdf.jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4'
   });
 
-  // 4. Add title with styling (handles multi-line)
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 0, 139);
   pdf.setFontSize(16);
   
-  // Split title into lines and add each line separately
+
   const titleLines = title.split('\n');
   let titleYPosition = 15;
   titleLines.forEach(line => {
     pdf.text(line.trim(), 20, titleYPosition, {align: 'left'});
-    titleYPosition += 7; // Line height
+    titleYPosition += 7; 
   });
 
-  // 5. Add chart image (centered)
+
   const imgWidth = 180;
   const imgHeight = (canvas.height * imgWidth) / canvas.width;
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -449,20 +366,16 @@ async function generatePdf() {
   
   pdf.addImage(chartImage, 'PNG', xPos, titleYPosition + 5, imgWidth, imgHeight);
   
-  // 6. Add analysis text with proper line handling
   const textYPosition = titleYPosition + 10 + imgHeight;
   
-  // Add section header
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(70, 130, 180);
   pdf.text('ANALYSE DE PERFORMANCE', 20, textYPosition);
   
-  // Process analysis text
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(12);
   
-  // Split into paragraphs and add each with proper spacing
   const paragraphs = analysis.split('\n\n');
   let currentY = textYPosition + 10;
   
@@ -470,42 +383,38 @@ async function generatePdf() {
     const lines = pdf.splitTextToSize(paragraph, pageWidth - 40);
     lines.forEach(line => {
       pdf.text(line.trim(), 20, currentY, {align: 'left'});
-      currentY += 7; // Line height
+      currentY += 7; 
     });
-    currentY += 5; // Extra space between paragraphs
+    currentY += 5; 
   });
   
-  // 7. Save PDF
   pdf.save('performance_report.pdf');
 }
 
 function generateExcel() {
-  // 1. Prepare data
+
   const {title, analysis} = generateAnalysisText(score, threshold);
   const currentDate = new Date().toISOString().slice(0, 10);
   
-  // 2. Create workbook
   const workbook = XLSX.utils.book_new();
   
-  // 3. Prepare worksheet data
   const wsData = [
     ["Rapport ODD", "", "", ""],
     ["Date:", currentDate, "", ""],
-    ["", "", "", ""], // Empty row
+    ["", "", "", ""], 
     [title, "", "", ""],
-    ["", "", "", ""], // Empty row
+    ["", "", "", ""],
     ["Score", score, "", ""],
     ["Seuil", threshold, "", ""],
     ["Écart", score - threshold, "", ""],
-    ["", "", "", ""], // Empty row
+    ["", "", "", ""],
     ["ANALYSE DE PERFORMANCE", "", "", ""],
     ...analysis.split('\n').map(line => [line, "", "", ""]),
-    ["", "", "", ""], // Empty row
+    ["", "", "", ""], 
     ["Détails des Indicateurs", "", "", ""],
     ["Code", "Nom", "Valeur", "Seuil", "Statut"]
   ];
 
-  // Add ODD data rows
   oddData.forEach(item => {
     wsData.push([
       item.code,
@@ -516,30 +425,26 @@ function generateExcel() {
     ]);
   });
 
-  // 4. Create worksheet
+
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   
-  // 5. Apply styling through cell objects
   const wscols = [
-    {wch: 30}, // Column A width
-    {wch: 15}, // Column B width
-    {wch: 15}, // Column C width
-    {wch: 15}  // Column D width
+    {wch: 30}, 
+    {wch: 15}, 
+    {wch: 15}, 
+    {wch: 15}  
   ];
   ws['!cols'] = wscols;
 
-  // Merge title cells
   ws['!merges'] = [
-    {s: {r: 0, c: 0}, e: {r: 0, c: 3}}, // Report title
-    {s: {r: 3, c: 0}, e: {r: 3, c: 3}}, // Indicator title
-    {s: {r: 9, c: 0}, e: {r: 9, c: 3}}, // Analysis header
-    {s: {r: 12, c: 0}, e: {r: 12, c: 4}} // Indicators header
+    {s: {r: 0, c: 0}, e: {r: 0, c: 3}}, 
+    {s: {r: 3, c: 0}, e: {r: 3, c: 3}}, 
+    {s: {r: 9, c: 0}, e: {r: 9, c: 3}}, 
+    {s: {r: 12, c: 0}, e: {r: 12, c: 4}} 
   ];
 
-  // 6. Add worksheet to workbook
   XLSX.utils.book_append_sheet(workbook, ws, "Rapport ODD");
 
-  // 7. Generate and download Excel file
   XLSX.writeFile(workbook, `rapport_odd_${currentDate}.xlsx`);
 }
 
