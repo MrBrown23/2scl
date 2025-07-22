@@ -32,7 +32,14 @@ $previous = 'page1.php';
 
 require 'functions.php';
 
-$values = getAllIndicatorValuesForGoal($id_odd, $areaCode); 
+// $stmUnits = $pdo->prepare("SELECT * FROM indicateurs WHERE code REGEXP '\\b?\\.[^}].[^}]'");
+// $stmUnits->execute([$id_odd]);
+// $units =  $stmUnits->fetchAll(PDO::FETCH_ASSOC);
+
+$values = getAllIndicatorValuesForGoal($id_odd, $areaCode);
+// foreach($values as $value){
+//     echo $value['unite_mesure'];
+// } 
 
 
 $page_title = "ODD $id_odd - Cibles et Indicateurs";
@@ -319,6 +326,7 @@ $page_title = "ODD $id_odd - Cibles et Indicateurs";
                         value="<?= htmlspecialchars($var['valeur_variable'] ?? '') ?>"
                         data-id="<?= $var['id_variable'] ?>"
                         data-type="<?= $normalized_type ?>"
+                        data_unit="<?= htmlspecialchars($indicateur['unite_mesure']) ?>"
                         min="0.01"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500
                             focus:border-blue-500 mb-3">
@@ -562,7 +570,8 @@ $page_title = "ODD $id_odd - Cibles et Indicateurs";
                     try {
                         const res = eval(formule);
                         const formattedRes = isNaN(res) ? '-' : res.toFixed(2) + ' ' + unit;
-                        const type = form.dataset.type; 
+                        const type = form.dataset.type;
+                        // const unit = form.dataset.unit;
                         if (type === 'boolean') {
                             const checkbox = form.querySelector('input[type="checkbox"]');
                             if (!checkbox) return;
@@ -577,7 +586,29 @@ $page_title = "ODD $id_odd - Cibles et Indicateurs";
                             submitEl.disabled = true;
                             if (resultInput) resultInput.value = '';
                             return;
-                        } else {
+                        }
+                        if(unit === 'par 1M' && (res < 0 || res > 100000)){
+                            span.textContent = 'Résultat hors limites (0 - 1000000)';
+                            span.classList.add('text-red-500'); 
+                            submitEl.disabled = true;
+                            if (resultInput) resultInput.value = '';
+                            return;
+                        }
+                        if(unit === 'par 100k' && (res < 0 || res > 100000)){
+                            span.textContent = 'Résultat hors limites (0 - 100000)';
+                            span.classList.add('text-red-500'); 
+                            submitEl.disabled = true;
+                            if (resultInput) resultInput.value = '';
+                            return;
+                        }
+                        if(unit === 'par 1k' && (res < 0 || res > 100000)){
+                            span.textContent = 'Résultat hors limites (0 - 10000)';
+                            span.classList.add('text-red-500'); 
+                            submitEl.disabled = true;
+                            if (resultInput) resultInput.value = '';
+                            return;
+                        }
+                        else {
                             span.classList.remove('text-red-500');
                             submitEl.disabled = false;
                         }
@@ -651,76 +682,77 @@ $page_title = "ODD $id_odd - Cibles et Indicateurs";
                                 $unite = $indicateur['unite_mesure'];
                                 switch($type_valeur){
                                     case 'Ratio':
-                                        $normalized_value = $resultatFinal * 100;
+                                        // $normalized_value = $resultatFinal * 100;
+                                        $normalized_value = $resultatFinal;
                                         break;
                                     case 'Quantitatif':
                                         $table_name = "odd" . $id_odd;
                                         $excluded = ['id', 'id_user', 'annee'];
 
-                                        try {
-                                            // Step 1: Get all column names
-                                            $stmtColumns = $pdo->prepare("SHOW COLUMNS FROM `$table_name`");
-                                            $stmtColumns->execute();
-                                            $columns = $stmtColumns->fetchAll(PDO::FETCH_COLUMN);
+                                        // try {
+                                        //     // Step 1: Get all column names
+                                        //     $stmtColumns = $pdo->prepare("SHOW COLUMNS FROM `$table_name`");
+                                        //     $stmtColumns->execute();
+                                        //     $columns = $stmtColumns->fetchAll(PDO::FETCH_COLUMN);
 
-                                            if (!$columns) {
-                                                error_log("Failed to fetch columns from table $table_name.");
-                                                break;
-                                            }
+                                        //     if (!$columns) {
+                                        //         error_log("Failed to fetch columns from table $table_name.");
+                                        //         break;
+                                        //     }
 
-                                            // Step 2: Filter out excluded columns
-                                            $indicatorColumns = array_filter($columns, fn($col) => !in_array($col, $excluded));
+                                        //     // Step 2: Filter out excluded columns
+                                        //     $indicatorColumns = array_filter($columns, fn($col) => !in_array($col, $excluded));
 
-                                            // Step 3: Build MIN/MAX parts
-                                            $minMaxParts = [];
-                                            foreach ($indicatorColumns as $col) {
-                                                $minMaxParts[] = "MIN(`$col`) AS min_$col";
-                                                $minMaxParts[] = "MAX(`$col`) AS max_$col";
-                                            }
+                                        //     // Step 3: Build MIN/MAX parts
+                                        //     $minMaxParts = [];
+                                        //     foreach ($indicatorColumns as $col) {
+                                        //         $minMaxParts[] = "MIN(`$col`) AS min_$col";
+                                        //         $minMaxParts[] = "MAX(`$col`) AS max_$col";
+                                        //     }
 
-                                            // Step 4: Combine into one SELECT
-                                            $selectClause = implode(", ", $minMaxParts);
-                                            $sql = "SELECT $selectClause FROM `$table_name` WHERE id_user = ? AND annee = ?";
+                                        //     // Step 4: Combine into one SELECT
+                                        //     $selectClause = implode(", ", $minMaxParts);
+                                        //     $sql = "SELECT $selectClause FROM `$table_name` WHERE id_user = ? AND annee = ?";
                                             
-                                            // Step 5: Prepare and execute
-                                            $stmtMinMax = $pdo->prepare($sql);
-                                            $stmtMinMax->execute([$id_user, $annee]);
-                                            $minMaxValues = $stmtMinMax->fetch(PDO::FETCH_ASSOC);
+                                        //     // Step 5: Prepare and execute
+                                        //     $stmtMinMax = $pdo->prepare($sql);
+                                        //     $stmtMinMax->execute([$id_user, $annee]);
+                                        //     $minMaxValues = $stmtMinMax->fetch(PDO::FETCH_ASSOC);
 
-                                            if (!$minMaxValues) {
-                                                error_log("No min/max values returned from $table_name for user $id_user and year $annee.");
-                                                $normalized_value = 100;
-                                                break;
-                                            }
+                                        //     if (!$minMaxValues) {
+                                        //         error_log("No min/max values returned from $table_name for user $id_user and year $annee.");
+                                        //         $normalized_value = 100;
+                                        //         break;
+                                        //     }
 
-                                            // Get the correct column name for this indicator
-                                            $col = $indicateur['code_indicateur'];
-                                            $minKey = "min_$col";
-                                            $maxKey = "max_$col";
+                                        //     // Get the correct column name for this indicator
+                                        //     $col = $indicateur['code_indicateur'];
+                                        //     $minKey = "min_$col";
+                                        //     $maxKey = "max_$col";
 
-                                            if (isset($minMaxValues[$minKey], $minMaxValues[$maxKey]) &&
-                                                $minMaxValues[$minKey] !== null && $minMaxValues[$maxKey] !== null) {
+                                        //     if (isset($minMaxValues[$minKey], $minMaxValues[$maxKey]) &&
+                                        //         $minMaxValues[$minKey] !== null && $minMaxValues[$maxKey] !== null) {
                                                 
-                                                $min = $minMaxValues[$minKey];
-                                                $max = $minMaxValues[$maxKey];
+                                        //         $min = $minMaxValues[$minKey];
+                                        //         $max = $minMaxValues[$maxKey];
 
-                                                if ($max != $min) {
-                                                    $normalized_value = (($resultatFinal - $min) / ($max - $min)) * 100;
-                                                } else {
-                                                    error_log("Min and max are equal for $col (value: $min). Avoiding division by zero.");
-                                                    $normalized_value = 100;
-                                                }
+                                        //         if ($max != $min) {
+                                        //             $normalized_value = (($resultatFinal - $min) / ($max - $min)) * 100;
+                                        //         } else {
+                                        //             error_log("Min and max are equal for $col (value: $min). Avoiding division by zero.");
+                                        //             $normalized_value = 100;
+                                        //         }
 
-                                            } else {
-                                                error_log("Missing min or max for column $col: " . json_encode($minMaxValues));
-                                                $normalized_value = 100;
-                                            }
+                                        //     } else {
+                                        //         error_log("Missing min or max for column $col: " . json_encode($minMaxValues));
+                                        //         $normalized_value = 100;
+                                        //     }
 
-                                        } catch (PDOException $e) {
-                                            error_log("PDOException while processing Quantitatif normalization for $col: " . $e->getMessage());
-                                            $normalized_value = 100;
-                                        }
-
+                                        // } catch (PDOException $e) {
+                                        //     error_log("PDOException while processing Quantitatif normalization for $col: " . $e->getMessage());
+                                        //     $normalized_value = 100;
+                                        // }
+                                        $normalized_value = $resultatFinal;
                                         break;
 
                                     
