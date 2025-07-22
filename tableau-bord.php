@@ -55,7 +55,7 @@
         
     }
 
-    $query = $pdo->query('SELECT COUNT(*) FROM notifications');
+    $query = $pdo->query('SELECT COUNT(*) FROM notifications WHERE read_status = 0');
     $result = $query->fetchAll(PDO::FETCH_ASSOC);
     $alert = $result[0]["COUNT(*)"];
 
@@ -65,11 +65,34 @@
 
 
     $indicateurs = [];
-    $query = $pdo->query('SELECT i.*, ind.formule, ind.type_valeur 
-                        FROM indicateur i
-                        JOIN indicateurs ind ON i.id_indicateur = ind.id_indicateur'
-                        );
+    // $query = $pdo->query('SELECT i.*, ind.formule, ind.type_valeur, ind.unite_mesure
+    //                     FROM indicateur i
+    //                     JOIN indicateurs ind ON i.id_indicateur = ind.id_indicateur'
+    //                     );
+
+    $query = $pdo->query( "SELECT 
+          i.*, 
+          ind.formule, 
+          ind.type_valeur, 
+          ind.unite_mesure, 
+          s.valeur_quantitative
+          FROM indicateur i
+          JOIN indicateurs ind ON i.id_indicateur = ind.id_indicateur
+          JOIN seuil_indicateur s ON s.code_indicateur = s.code_indicateur;"
+    );
+
+                       
     $indicateurs = $query->fetchAll(PDO::FETCH_ASSOC);
+
+    // foreach($indicateurs as &$indicateur){
+    //   $code = $indicateur['code_indicateur'];
+    //   $query = $pdo->prepare("SELECT valeur_quantitative FROM seuil_indicateur WHERE code_indicateur = ?");
+    //   $query->execute([$code]);
+    //   $result = $query->fetchAll(PDO::FETCH_ASSOC);
+    //   $value = $result[0]["valeur_quantitative"];
+    //   $indicateur['threshold'] = $value;
+    // }
+    
  
     
 
@@ -152,7 +175,7 @@
       <div class="col-md-2 flex-fill">
         <a href="#" class="card card-glass text-center p-3 d-block h-100">
           <i class="bi bi-patch-check icon-large text-info"></i>
-          <h5 class="mt-2">Certification ISO</h5>
+          <h5 class="mt-2">Verification ISO</h5>
           <h2>✔</h2>
         </a>
       </div>
@@ -178,7 +201,7 @@
                     alt="ODD <?= htmlspecialchars($i+1) ?>">
                 </td>
                 <td>
-                  <?= htmlspecialchars_decode($odd["stitre"]) ?>
+                  <a href='traitement_odd.php?id_odd=<?= $i+1 ?>' class="text-decoration-none"><?= htmlspecialchars_decode($odd["stitre"]) ?></a>
                 </td>
                 <td>
                   <span class="badge <?php echo $odd["status"] === 'Atteint' ?  "bg-success" : "bg-primary" ?>">
@@ -402,11 +425,55 @@
                 }
             ]
                             },
+            // options: {
+            //     scales: {
+            //     y: { max: 100, beginAtZero: true, ticks: { stepSize: 20 } }
+            //     }
+            // }
+
             options: {
-                scales: {
-                y: { max: 100, beginAtZero: true, ticks: { stepSize: 20 } }
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                        },
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                  const datasetLabel = context.dataset.label || '';
+                                    const data = oddData[context.dataIndex];
+                                    if (datasetLabel === 'Seuil (%)') {
+                                        return `Seuil: ${data.seuil}%`;
+                                    }
+                                    const diff = context.raw - data.seuil;
+                                    const prefix = diff >= 0 ? '+' : '';
+                                    return [
+                                        `ODD ${data.code}: ${context.raw}%`,
+                                        `Seuil: ${data.seuil || 0}%`,
+                                        `Écart: ${prefix}${diff.toFixed(1)}%`
+                                    ];
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12
+                            }
+                        }
+                    }
                 }
-            }
             });
     // function generatePdf(){
     //     // oddChart
@@ -433,6 +500,11 @@ function generatePdf() {
     
 
     const headers = ['Indicateur', 'Nom', 'Valeur', 'Seuil'];
+  //  const headers = [ 
+  //   'ODD', 'Indicateur', 'Seuil de référence', 
+  //   'Écart au seuil', 'Unité', 'Tendance', 'Année',
+  //    'Fréquence de mise à jour', 'Recommandations'
+  //   ]
     const headerRow = document.createElement('tr');
     headers.forEach(headerText => {
         const th = document.createElement('th');
@@ -530,29 +602,54 @@ function createCSVFile() {
   const indicatorsData = [
     <?php 
     foreach ($indicateurs as $indicateur): 
-      $threshold = 75;
+      $threshold = $indicateur["valeur_quantitative"];
+      $score =  $indicateur['score'];
+      $ecart = $score - $threshold;
+      $unit = $indicateur['unite_mesure'];
+      $odd = explode('.', $indicateur['code_indicateur'])[0];
+      $tendance = "->";
+      $year = 2025;
+      $frequency = "annuelle";
     ?>
     {
-      Indicateur: <?= json_encode($indicateur['code_indicateur']) ?>,
-      Valeur: <?= json_encode($indicateur['score'] ?? '') ?>,
-      Seuil: <?= $threshold ?>,
+      ODD: "<?= $odd ?>",
+      Indicateur: "<?= $indicateur['code_indicateur'] ?>",
+      Valeur: "<?= $score ?>",
+      Seuil: "<?= $threshold ?>",
+      Ecart: "<?= $ecart ?>",
+      Unit: "<?= $unit ?>",
+      Tendance: "<?= $tendance ?>",
+      Year: "<?= $year ?>",
+      Frequency: "<?= $frequency ?>",
+      
       <?php if(isset($indicateur['name'])): ?>
-      nom_indicateur: <?= json_encode($indicateur['name']) ?>
+  
+      recommandations: "<?= $indicateur['name'] ?>"
       <?php endif; ?>
+
     },
     <?php endforeach; ?>
   ];
 
-  const headers = ["Indicateur", "Nom", "Valeur", "Seuil"];
+  const headers =  ["ODD", "Indicateur", "Valeur locale", "Seuil de référence",
+    'Écart au seuil', 'Unité',
+    'Tendance', 'Année','Fréquence de mise à jour',
+    "Recommandations"];
   
   let csv = headers.join(',') + '\n';
   
   indicatorsData.forEach(item => {
     const row = [
+      item.ODD,
       item.Indicateur,
-      item.nom_indicateur || "",
       item.Valeur,
-      item.Seuil
+      item.Seuil,
+      item.Ecart,
+      item.Unit,
+      item.Tendance,
+      item.Year,
+      item.Frequency,
+      item.recommandations || ''
     ].map(value => {
       if (typeof value === 'string') {
         return `"${value.replace(/"/g, '""')}"`;
@@ -580,18 +677,34 @@ function createCSVFile() {
   const IndicatorsData = [
     <?php 
     foreach ($indicateurs as $indicateur): 
-      $threshold = 75;
-      $score =  $indicateur['score'] ?? 'NULL';
+      $threshold = $indicateur['valeur_quantitative'];
+      $score =  $indicateur['score'];
+      $ecart = $score - $threshold;
+      $unit = $indicateur['unite_mesure'];
+      $odd = explode('.', $indicateur['code_indicateur'])[0];
+      $tendance = "->";
+      $year = 2025;
+      $frequency = "annuelle";
+
+
               
       error_log("Indicateur Code: " . $indicateur['code_indicateur']);
       error_log("Result: " . print_r($resultatFinal, true));
     ?>
     {
+      ODD: "<?= $odd ?>",
       Indicateur: "<?= $indicateur['code_indicateur'] ?>",
       Valeur: "<?= $score ?>",
-      Seuil: <?= $threshold ?>,
+      Seuil: "<?= $threshold ?>",
+      Ecart: "<?= $ecart ?>",
+      Unit: "<?= $unit ?>",
+      Tendance: "<?= $tendance ?>",
+      Year: "<?= $year ?>",
+      Frequency: "<?= $frequency ?>",
+      
       <?php if(isset($indicateur['name'])): ?>
-      nom_indicateur: "<?= $indicateur['name'] ?>"
+  
+      recommandations: "<?= $indicateur['name'] ?>"
       <?php endif; ?>
 
     },
@@ -603,25 +716,46 @@ function createCSVFile() {
   const workbook = XLSX.utils.book_new();
   
   const wsData = [
-    ["Indicateur", "Nom", "Valeur", "Seuil"]
+    ["ODD", "Indicateur", "Valeur locale", "Seuil de référence",
+    'Écart au seuil', 'Unité',
+    'Tendance', 'Année','Fréquence de mise à jour',
+    "Recommandations"]
   ];
+
+  // const wsData = [ 
+  //   'ODD', 'Indicateur', 'Seuil de référence', 
+  //   'Écart au seuil', 'Unité', 'Tendance', 'Année',
+  //    'Fréquence de mise à jour', 'Recommandations'
+  //   ]
 
   IndicatorsData.forEach(item => {
     wsData.push([
+      item.ODD,
       item.Indicateur,
-      item.nom_indicateur || "",
       item.Valeur,
       item.Seuil,
+      item.Ecart,
+      item.Unit,
+      item.Tendance,
+      item.Year,
+      item.Frequency,
+      item.recommandations || ''
     ]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   
   ws['!cols'] = [
-    { wch: 15 }, 
-    { wch: 100 },  
-    { wch: 15 },   
-    { wch: 15 }   
+    { wch: 10 }, 
+    { wch: 10 },  
+    { wch: 10 },   
+    { wch: 15 } ,  
+    { wch: 15 } , 
+    { wch: 10 } ,
+    { wch: 10 } ,
+    { wch: 10 } ,
+    { wch: 15 } , 
+    { wch: 100 } 
   ];
 
   IndicatorsData.forEach((_, rowIndex) => {
